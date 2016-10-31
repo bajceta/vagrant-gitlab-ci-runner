@@ -4,8 +4,10 @@
 Vagrant.configure(2) do |config|
   config.vm.box = "ubuntu/xenial64"
   
-  config.vm.provision "shell", inline: "sudo apt-get update -qq"
-  config.vm.provision "shell", inline: "sudo apt-get install -qq python2.7"
+  config.vm.provider "virtualbox" do |v|
+     v.memory = 2048
+     v.cpus = 2
+  end
 
   config.vm.provision "ansible" do |ansible|
     ansible.playbook = "playbook.yml"

@@ -2,19 +2,21 @@
 - hosts: all
   become: yes
   become_user: root
+  gather_facts: false
   vars:
     - ansible_python_interpreter: /usr/bin/python2.7 
   tasks:
-    # - name: apt-get update 
-    #   raw: sudo apt-get update -qq 
-    # - name: Install python 2.7 
-    #   raw: sudo apt-get install -qq python2.7 
+    - name: apt-get update 
+      raw: sudo apt-get update -qq 
+    - name: Install python 2.7 
+      raw: sudo apt-get install -qq python2.7 
     - lineinfile: dest=/etc/hosts regexp='^ubuntu-xenial' line='127.0.0.1 ubuntu-xenial' owner=root group=root mode=0644
 
-    - raw: usermod -aG docker gitlab-runner
     # - raw: usermod -aG vboxusers gitlab-runner
     - stat: path=/usr/bin/docker
       register: docker_exec
+    - stat: path=/usr/bin/gitlab-ci-multi-runner
+      register: runner_exec
     - apt: update_cache=yes
       when: docker_exec.stat.exists == False
     - apt: name=nano state=absent
@@ -30,9 +32,11 @@
     - command: bash -c 'curl -sSL https://get.docker.com/ | sh'
       when: docker_exec.stat.exists == False
     - command: bash -c 'curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-ci-multi-runner/script.deb.sh | bash'
-      when: docker_exec.stat.exists == False
+      when: runner_exec.stat.exists == False
     - apt: name=gitlab-ci-multi-runner state=present
-      when: docker_exec.stat.exists == False
+      when: runner_exec.stat.exists == False
+    - command: usermod -aG docker gitlab-runner
+      when: runner_exec.stat.exists == False
     - command: gitlab-ci-multi-runner register --non-interactive --url {{url}} --registration-token {{token}} --name {{name}} --tag-list '' --executor shell
       when: url is not none and token is not none and name is not none
     - fail: msg="You must provide ENV variables $url, $token, $name. Runner has not been registred yet."
